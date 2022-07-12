@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/seedrandom/3.0.5/seedrandom.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@600&display=swap" rel="stylesheet">
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        background-color: #f3f3f3;
+        color: #131323;
+        font-family: 'Noto Sans Mono', monospace;
+        text-transform: uppercase;
+      }
+
+      input[type="text"] {
+        max-width: 600px;
+        width: 100%;
+        font-family: 'Noto Sans Mono', monospace;
+        font-size: 22px;
+        line-height: 32px;
+        padding: 10px;
+        text-transform: uppercase;
+      }
+
+      textarea {
+        max-width: 600px;
+        height: 200px;
+        width: 100%;
+        font-family: 'Noto Sans Mono', monospace;
+        font-size: 22px;
+        line-height: 32px;
+        padding: 10px;
+        text-transform: uppercase;
+      }
+
+      .row {
+        margin: 25px;
+      }
+
+      .button {
+        background-color: #131323;
+        color: #f3f3f3;
+        display: inline-block;
+        padding: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <section>
+      <div class="row">
+        <h1>SCRAMBLE 13 VU D3 44 FA F9</h1>
+      </div>
+      <div class="row">
+        <input type="text" id="secret">
+      </div>
+      <div class="row">
+        <textarea id="decoded"></textarea>
+      </div>
+      <div class="row">
+        <textarea id="encoded"></textarea>
+      </div>
+      <div class="row">
+        <div id="encode" class="button">encode</div>
+        <div id="decode" class="button">decode</div>
+      </div>
+    </section>
+    <script>
+      // Distribute the 32 character input set across 1024 character 32 bit output set informed by letter frequency
+      const DISTRIBUTION_MAP = {
+        "A": 68,
+        "B": 14,
+        "C": 24,
+        "D": 40,
+        "E": 90,
+        "F": 20,
+        "G": 20,
+        "H": 60,
+        "I": 70,
+        "J": 12,
+        "K": 16,
+        "L": 40,
+        "M": 24,
+        "N": 66,
+        "O": 72,
+        "P": 10,
+        "Q": 10,
+        "R": 60,
+        "S": 60,
+        "T": 78,
+        "U": 28,
+        "V": 18,
+        "W": 24,
+        "X": 10,
+        "Y": 20,
+        "Z": 10,
+        ".": 10,
+        "?": 10,
+        "!": 10,
+        ",": 10,
+        "'": 10,
+        " ": 10,
+      };
+
+      const BASE32 = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V']
+
+      //  0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  A,  B,  C,  D,  E,  F,  G,  H,  I,  J,  K,  L,  M,  N,  O,  P,  Q,  R,  S,  T,  U,  V,  W,  X,  Y,  Z
+      //  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+
+      // const secret = ""
+
+      // Create a cypher to use for encoding and decoding messages
+      const generateCypher = (secret, distributionMap) => {
+        const rng = new Math.seedrandom(secret);
+        const initialValues = [...Array(1024).keys()];
+        const cypher = {};
+
+        // populates each character in the cypher with base 10 values based on their distribution
+        Object.entries(distributionMap).forEach(([k, v]) => {
+          cypher[k] = [];
+
+          for(let i = 0; i < v; i++) {
+            // set index to a random valid index for the initialValues array
+            let index = Math.floor(rng() * initialValues.length);
+            // pull the value out at that index and remove it from the initialValues array
+            let value = initialValues.splice(index, 1)[0]
+            // push that value into the potential values for the current letter
+            cypher[k].push(value)
+          }
+        })
+
+        return cypher;
+      }
+
+      const secret = () => {
+        return document.querySelector("#secret").value.toUpperCase();
+      }
+
+      const secretMessage = () => {
+        return document.querySelector("#decoded").value.toUpperCase();
+      }
+
+      const encodedMessage = () => {
+        return document.querySelector("#encoded").value.toUpperCase();
+      }
+
+      const encode = (cypher, message) => {
+        const newMessage = message.split("").map((char) => {
+          let upper = char.toUpperCase();
+
+          if (!cypher.hasOwnProperty(upper)) {
+            upper = " ";
+          }
+
+          const index = Math.floor(Math.random() * cypher[upper].length);
+          return cypher[upper][index];
+        })
+
+        const finalMessage = newMessage.map((num) => {
+          let quotient = Math.floor(num / 32);
+          let remainder = num % 32;
+          return `${BASE32[quotient]}${BASE32[remainder]}`;
+        })
+
+        return finalMessage.join(" ");
+      }
+
+      const decode = (cypher, message) => {
+        const newMessage = message.split(" ").map((chars) => {
+          [quotientChar, remainderChar] = chars.split("")
+          const quotient = BASE32.indexOf(quotientChar)
+          const remainder = BASE32.indexOf(remainderChar)
+          const number = quotient * 32 + remainder;
+          [[letter, _]] = Object.entries(cypher).filter(([k, v]) => v.includes(number))
+
+          console.log(letter)
+          return letter;
+        })
+
+        // const finalMessage = newMessage.map((num) => {
+        //   let quotient = Math.floor(num / 32);
+        //   let remainder = num % 32;
+        //   return `${BASE32[quotient]}${BASE32[remainder]}`;
+        // })
+
+        return newMessage.join("");
+      }
+
+      const encodeButton = document.querySelector("#encode");
+      encodeButton.addEventListener('click', function (event) {
+        event.preventDefault();
+        window.cypher = generateCypher(secret(), DISTRIBUTION_MAP);
+        let result = encode(cypher, secretMessage());
+        document.querySelector("#encoded").value = result;
+        result = decode(cypher, result);
+        document.querySelector("#decoded").value = result;
+      }, false);
+
+      const decodeButton = document.querySelector("#decode");
+      decodeButton.addEventListener('click', function (event) {
+        event.preventDefault();
+        window.cypher = generateCypher(secret(), DISTRIBUTION_MAP);
+        let result = decode(cypher, encodedMessage());
+        document.querySelector("#decoded").value = result;
+      }, false);
+    </script>
+  </body>
+</html>
