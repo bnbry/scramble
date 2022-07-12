@@ -56,6 +56,7 @@
       }
 
       .field {
+        color: var(--font-color);
         max-width: 500px;
         width: 100%;
         font-family: 'Noto Sans Mono', monospace;
@@ -125,14 +126,17 @@
       // characters and makes it harder to spot the common ones and break the cipher. This is an example of a homophonic
       // substitution cipher
       const DISTRIBUTION_MAP = {
-        "A": 68, "B": 14, "C": 24, "D": 40,
-        "E": 90, "F": 20, "G": 20, "H": 60,
-        "I": 70, "J": 12, "K": 16, "L": 40,
-        "M": 24, "N": 66, "O": 72, "P": 10,
-        "Q": 10, "R": 60, "S": 60, "T": 78,
-        "U": 28, "V": 18, "W": 24, "X": 10,
-        "Y": 20, "Z": 10, ".": 10, "?": 10,
-        "!": 10, ",": 10, "'": 10, " ": 10,
+        "A": 66, "B": 12, "C": 22, "D": 38,
+        "E": 88, "F": 18, "G": 18, "H": 58,
+        "I": 68, "J": 10, "K": 14, "L": 38,
+        "M": 22, "N": 64, "O": 70, "P":  8,
+        "Q":  8, "R": 58, "S": 58, "T": 76,
+        "U": 26, "V": 16, "W": 22, "X":  8,
+        "Y": 18, "Z":  8, ".":  7, "?":  7,
+        "!":  7, ",":  7, "'":  7, " ":  7,
+        "0":  7, "1":  7, "2":  7, "3":  7,
+        "4":  7, "5":  7, "6":  7, "7":  7,
+        "8":  7, "9":  7,
       };
 
       const BASE32 = [
@@ -143,7 +147,7 @@
       ];
 
       // Create a cipher to use for encoding and decoding messages
-      const generatecipher = (passphrase, distributionMap) => {
+      const generateCipher = (passphrase, distributionMap) => {
         const rng = new Math.seedrandom(passphrase);
         const initialValues = [...Array(1024).keys()];
         const cipher = {};
@@ -165,17 +169,44 @@
         return cipher;
       }
 
-      const passphrase = () => {
-        return document.querySelector("#passphrase").value.toUpperCase();
-      }
+      const gui = {
+        get passphrase() { return document.querySelector("#passphrase").value.toUpperCase(); },
+        get plaintext() { return document.querySelector("#plaintext").value.toUpperCase(); },
+        set plaintext(msg) { document.querySelector("#plaintext").value = msg; },
+        get ciphertext() { return document.querySelector("#ciphertext").value.toUpperCase(); },
+        set ciphertext(msg) { document.querySelector("#ciphertext").value = msg; },
 
-      const plaintext = () => {
-        return document.querySelector("#plaintext").value.toUpperCase();
-      }
+        onEncipherClick(func) {
+          document.querySelector("#encipher").addEventListener("click", (event) => {
+            event.preventDefault();
+            func(event);
+          });
+        },
 
-      const ciphertext = () => {
-        return document.querySelector("#ciphertext").value.toUpperCase();
-      }
+        onDecipherClick(func) {
+          document.querySelector("#decipher").addEventListener("click", (event) => {
+            event.preventDefault();
+            func(event);
+          });
+        },
+
+        clear(event) {
+          event.preventDefault();
+          document.querySelectorAll(".field").forEach(el => el.value = "");
+        },
+
+        toggleMode(event) {
+          event.preventDefault();
+          document.querySelector("body").classList.toggle("dark");
+        },
+
+        prepare() {
+          document.querySelector("#toggle_ui").addEventListener("click", this.toggleMode)
+          document.querySelector("#clear").addEventListener("click", this.clear)
+
+          return this;
+        }
+      }.prepare();
 
       const encipher = (cipher, message) => {
         const newMessage = message.split("").map((char) => {
@@ -212,35 +243,16 @@
         return newMessage.join("");
       }
 
-      const encipherButton = document.querySelector("#encipher");
-      encipherButton.addEventListener('click', function (event) {
-        event.preventDefault();
-        window.cipher = generatecipher(passphrase(), DISTRIBUTION_MAP);
-        let result = encipher(cipher, plaintext());
-        document.querySelector("#ciphertext").value = result;
-        result = decipher(cipher, result);
-        document.querySelector("#plaintext").value = result;
-      }, false);
+      gui.onEncipherClick(function (event) {
+        window.cipher = generateCipher(gui.passphrase, DISTRIBUTION_MAP);
+        gui.ciphertext = encipher(cipher, gui.plaintext);
+        gui.plaintext = decipher(cipher, gui.ciphertext);
+      });
 
-      const decipherButton = document.querySelector("#decipher");
-      decipherButton.addEventListener('click', function (event) {
-        event.preventDefault();
-        window.cipher = generatecipher(passphrase(), DISTRIBUTION_MAP);
-        let result = decipher(cipher, ciphertext());
-        document.querySelector("#plaintext").value = result;
-      }, false);
-
-      const toggleButton = document.querySelector("#toggle_ui");
-      toggleButton.addEventListener('click', function (event) {
-        event.preventDefault();
-        document.querySelector("body").classList.toggle("dark");
-      }, false);
-
-      const clearButton = document.querySelector("#clear");
-      clearButton.addEventListener('click', function (event) {
-        event.preventDefault();
-        document.querySelectorAll(".field").forEach(el => el.value = "");
-      }, false);
+      gui.onDecipherClick(function (event) {
+        window.cipher = generateCipher(gui.passphrase, DISTRIBUTION_MAP);
+        gui.plaintext = decipher(cipher, gui.ciphertext);
+      });
     </script>
   </body>
 </html>
